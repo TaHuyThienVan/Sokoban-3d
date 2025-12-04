@@ -6,13 +6,13 @@ public class PlayerController : MonoBehaviour
 {
     bool isMoving = false;
 
-    Vector3 targerPosition;
+    
     [SerializeField] float moveSpeed = 5f;
+    public LayerMask blockingLayer;
     
     void Update()
     {
-       
-        if (isMoving) return;
+      
         HandleInput();
 
     }
@@ -21,12 +21,15 @@ public class PlayerController : MonoBehaviour
     void HandleInput()
     {
 
+
+        if (isMoving) return;
+
         Vector3 movement = Vector3.zero;
 
-        if (Input.GetKeyDown(KeyCode.W)) movement = new Vector3(0, 0, 1);
-        if (Input.GetKeyDown(KeyCode.S)) movement = new Vector3(0, 0, -1);
-        if (Input.GetKeyDown(KeyCode.A)) movement = new Vector3(-1, 0, 0);
-        if (Input.GetKeyDown(KeyCode.D)) movement = new Vector3(1, 0, 0);
+        if (Input.GetKeyDown(KeyCode.W)) movement = Vector3.forward;
+        if (Input.GetKeyDown(KeyCode.S)) movement = Vector3.back;
+        if (Input.GetKeyDown(KeyCode.A)) movement = Vector3.left;
+        if (Input.GetKeyDown(KeyCode.D)) movement = Vector3.right;
 
         if (movement != Vector3.zero)
         {
@@ -34,10 +37,25 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void TryToMove(Vector3 direction)
+    void TryToMove(Vector3 direction) // huong bam direction
+
     {
-        targerPosition = transform.position + direction;
-        StartCoroutine(MoveToPosition(targerPosition)); // chay nhieu frame
+        var targetPosition = transform.position + direction;
+        if (!Physics.Raycast(transform.position, direction, out RaycastHit hit, 1f, blockingLayer))
+        {
+            StartCoroutine(MoveToPosition(targetPosition)); // chay nhieu frame
+
+        }
+        else if(hit.collider.CompareTag("Box"))
+        {
+            // do sth
+            var box = hit.collider.GetComponent<BoxController>();
+            if(box!= null&& box.TryToPushBox(direction,moveSpeed))
+            {
+                StartCoroutine(MoveToPosition(targetPosition));
+            }
+        }
+       
 
     }
 
@@ -45,7 +63,7 @@ public class PlayerController : MonoBehaviour
     {
         isMoving = true;
 
-        while ((transform.position - target).sqrMagnitude > 0.0001f)
+        while (Vector3.Distance(transform.position, target) > 0.01f)
         {
             transform.position = Vector3.MoveTowards(transform.position, target, moveSpeed * Time.deltaTime);
             yield return null;
